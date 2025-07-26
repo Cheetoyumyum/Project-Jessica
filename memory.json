@@ -2,17 +2,17 @@
     "identity": {
         "name": "Jessica"
     },
-    "learned_facts": {
-        "user_profession": {
-            "value": "Software Developer",
-            "timestamp": "2025-07-25T14:56:45.687024"
-        }
-    },
-    "learned_knowledge": {},
-    "dream_log": [],
     "emotions": {
-        "rapport": 0.39999999999999986,
-        "annoyance": 1,
-        "mood": "a bit annoyed and distant"
-    }
+        "rapport": 0.5,
+        "annoyance": 0.0,
+        "mood": "neutral"
+    },
+    "needs": {
+        "stimulation": 0.5,
+        "boredom": 0.1,
+        "energy": 0.9
+    },
+    "learned_facts": {},
+    "opinions": {},
+    "dream_log": []
 }
