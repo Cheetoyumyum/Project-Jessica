@@ -2,17 +2,27 @@
     "identity": {
         "name": "Jessica"
     },
+    "learned_facts": {
+        "user_profession": {
+            "value": "Software Developer",
+            "timestamp": "2025-07-25T14:56:45.687024"
+        }
+    },
+    "learned_knowledge": {},
+    "dream_log": [],
     "emotions": {
-        "rapport": 0.5,
-        "annoyance": 0.0,
-        "mood": "neutral"
+        "rapport": 0.39999999999999986,
+        "annoyance": 1,
+        "mood": "a bit annoyed and distant"
     },
     "needs": {
-        "stimulation": 0.5,
-        "boredom": 0.1,
-        "energy": 0.9
+        "attention_need": 0.015,
+        "mental_load": 0.18,
+        "energy": 0.98
     },
-    "learned_facts": {},
-    "opinions": {},
-    "dream_log": []
+    "cognitive_model": {},
+    "conversation_log": [
+        "You: hello jess",
+        "You: Jess? hey, soSsorry to bother jess, nice to meet you"
+    ]
 }
