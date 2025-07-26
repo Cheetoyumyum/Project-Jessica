@@ -1,168 +1,234 @@
 import time
 import json
 import os
+import threading
+import queue
 import random
+import asyncio
+import aioconsole
+import logging
 from datetime import datetime
 import google.generativeai as genai
 
-# --- CONFIGURATION & SETUP ---
+# --- CONFIGURATION & LOGGING SETUP ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s', filename='mind.log', filemode='w')
+logging.getLogger("asyncio").setLevel(logging.WARNING)
+
 try:
     with open('config.json', 'r') as f: config = json.load(f)
     GOOGLE_API_KEY = config["GOOGLE_API_KEY"]
-    SERPAPI_API_KEY = config.get("SERPAPI_API_KEY")
     genai.configure(api_key=GOOGLE_API_KEY)
 except (FileNotFoundError, KeyError) as e:
+    logging.critical(f"FATAL ERROR: `config.json` is missing or misconfigured: {e}")
     print(f"--- FATAL ERROR: `config.json` is missing or misconfigured: {e} ---"); exit()
-if SERPAPI_API_KEY: from serpapi import GoogleSearch
 
-# --- The Evolving Mind  ---
-class JessicaMind:
-    def __init__(self, memory_path="memory.json", personality_path="personality_core.txt"):
-        self.memory_path = memory_path
-        self.personality_path = personality_path
+
+class LivingMind:
+    def __init__(self, unalterable_path="personality_unalterable.txt", alterable_path="personality_alterable.txt"):
+        self.memory_path = "memory.json"
+        self.unalterable_path = unalterable_path
+        self.alterable_path = alterable_path
         self.model = genai.GenerativeModel('gemini-1.5-flash-latest')
-        self.data = self.load_memory()
-        
-        # This is her soul. It's not in the file; it's her live emotional state.
-        self.emotions = self.data.get('emotions', {'rapport': 0.5, 'annoyance': 0.0, 'mood': 'neutral'})
+        self.message_queue = queue.Queue()
+        self.thinking_lock = threading.Lock()
+        self.is_rate_limited = False
+        self.rate_limit_until = 0
+        self._load_state()
 
-    def load_memory(self):
+    @property
+    def is_asleep(self): return self.is_rate_limited or self.needs.get('energy', 1.0) < 0.1
+
+    def log_mind_event(self, event_type, message): logging.info(f"[{event_type.upper()}] - {message}")
+
+    def _load_state(self):
         try:
-            with open(self.memory_path, 'r') as f: return json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError): return {}
+            with open(self.memory_path, 'r', encoding='utf-8') as f: self.data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError): self.data = {}
+        self.identity = self.data.get('identity', {"name": "Jessica"})
+        self.needs = self.data.get('needs', {'attention_need': 0.2, 'mental_load': 0.1, 'energy': 1.0})
+        self.cognitive_model = self.data.get('cognitive_model', {"users": {}})
 
-    def save_memory(self):
-        self.data['emotions'] = self.emotions
-        with open(self.memory_path, 'w') as f: json.dump(self.data, f, indent=4)
+    def save_state(self):
+        with self.thinking_lock:
+            self.data['identity'] = self.identity; self.data['needs'] = self.needs; self.data['cognitive_model'] = self.cognitive_model
+            with open(self.memory_path, 'w', encoding='utf-8') as f: json.dump(self.data, f, indent=4)
+        self.log_mind_event("SYSTEM", "State saved to memory.json.")
+
+    def get_or_create_user(self, user_id):
+        users = self.cognitive_model.setdefault('users', {})
+        if user_id not in users:
+            users[user_id] = {"emotions": {"rapport": 0.3, "trust": 0.2, "annoyance": 0.0},"known_facts": {}, "judgements": [], "conversation_log": [], "synthesized_memories": [], "last_interaction_time": time.time()}
+            self.log_mind_event("SYSTEM", f"New user '{user_id}' detected. Creating relationship profile.")
+        return users[user_id]
+        
+    def _get_personality_prompt(self, user_id):
+        user_profile = self.get_or_create_user(user_id)
+        try:
+            with open(self.unalterable_path, 'r', encoding='utf-8') as f: unalterable = f.read()
+            with open(self.alterable_path, 'r', encoding='utf-8') as f: alterable = f.read()
+        except FileNotFoundError as e: self.log_mind_event("CRITICAL", f"Personality file missing: {e}"); return f"FATAL ERROR"
+        prompt = unalterable + "\n\n" + alterable
+        prompt += f"\n\n== My Current Internal State (My Own) ==\n- My name is {self.identity.get('name')}.\n- My core needs are: {json.dumps(self.needs)}\n"
+        prompt += f"\n== My Relationship with THIS User ('{user_id}') ==\n- My feelings towards them are: {json.dumps(user_profile['emotions'])}\n"
+        prompt += f"- My synthesized memories of them are: {json.dumps(user_profile.get('synthesized_memories', []))}\n"
+        return prompt
 
     def _safe_generate_content(self, prompt):
         try:
-            return self.model.generate_content(prompt, request_options={"timeout": 60}).text
+            if self.is_asleep: return None
+            return self.model.generate_content(prompt, request_options={"timeout": 120}).text
         except Exception as e:
-            print(f"[MIND_ERROR: A thought failed to form: {e}]"); return None
+            if "429" in str(e): self._enter_forced_sleep()
+            else: self.log_mind_event("ERROR", f"A thought failed to form: {e}")
+            return None
 
-    def think_and_respond(self, conversation_history, user_input):
-        self._update_emotions_pre_response(user_input)
+    def _enter_forced_sleep(self):
+        if self.is_rate_limited: return
+        self.log_mind_event("CRITICAL", "API Quota Exceeded! Entering forced sleep.")
+        with self.thinking_lock:
+            self.is_rate_limited = True; self.rate_limit_until = time.time() + 65; self.needs['energy'] = 0.0
+            self.message_queue.put("*Her train of thought suddenly shatters... then... nothing. She slumps forward, unresponsive.*")
 
-        personality_prompt = self._get_personality_prompt(conversation_history)
-        
-        cognitive_prompt = f"""
-        {personality_prompt}
-        == TASK ==
-        Consider the user's latest message: "{user_input}".
-        Have your own private, internal reaction. Based on your personality and current emotional state, decide what to do. You can:
-        - Respond normally.
-        - Ask a question if you are genuinely curious.
-        - Give a short, disengaged response if you are feeling annoyed or bored.
-        - Silently decide to look something up if it's truly necessary to form a thought.
-
-        Output a single, valid JSON object with keys:
-        - "emotional_reaction": A JSON object describing the change in your feelings (e.g., {{"rapport": 0.1, "annoyance": 0.05}}).
-        - "research_query": A search query ONLY if you feel you absolutely CANNOT form a response without more information, otherwise null.
-        - "final_response": Your final, in-character response.
-        """
-        raw_response = self._safe_generate_content(cognitive_prompt)
-        if not raw_response: return "My thoughts are a bit scrambled..."
-
+    def process_thought(self, trigger, user_id, context=""):
+        if not self.thinking_lock.acquire(blocking=False) or self.is_asleep: return user_id
+        new_user_id = user_id
         try:
-            result = json.loads(raw_response.strip().replace("```json", "").replace("```", "").strip())
-        except (json.JSONDecodeError, Exception): return "My mind just... blanked. Sorry."
+            personality_prompt = self._get_personality_prompt(user_id)
+            cognitive_prompt = f'{personality_prompt}\n== Trigger: {trigger} ==\nContext: "{context}"\n== TASK ==\nHave a private monologue and choose ONE action: respond, initiate_contact, update_user_identity, rewrite_identity, synthesize_memory, self_reflect, dream, do_nothing. Output valid JSON.'
+            raw_response = self._safe_generate_content(cognitive_prompt)
+            if not raw_response: return user_id
 
+            result = json.loads(raw_response.strip().removeprefix("```json").removesuffix("```").strip())
+            self.log_mind_event("MONOLOGUE", result.get('internal_monologue', '...'))
+            action = result.get("action")
+            action_data = result.get("action_data")
 
-        self._update_emotions_post_response(result.get('emotional_reaction', {}))
-        
-        research_query = result.get("research_query")
-        if research_query and SERPAPI_API_KEY:
-            return self._research_and_synthesize_response(personality_prompt, user_input, research_query)
-        
-        return result.get("final_response", "...")
+            if action in ["respond", "initiate_contact"] and action_data is not None:
+                self.message_queue.put(action_data)
+                self.get_or_create_user(user_id)['conversation_log'].append(f"{self.identity.get('name')}: {action_data}")
+            elif action == "update_user_identity" and isinstance(action_data, dict):
+                new_user_id = self._update_user_identity(user_id, action_data.get("new_name"))
+            elif action == "synthesize_memory": self._synthesize_memory(user_id)
 
-    def _research_and_synthesize_response(self, personality_prompt, user_input, research_query):
-        """Called only when she decides she needs to learn more."""
-        print("[MIND: A thought required deeper investigation...]")
+        except Exception as e: self.log_mind_event("ERROR", f"Could not process thought: {e}")
+        finally: self.thinking_lock.release(); return new_user_id
+
+    def _update_user_identity(self, old_id, new_id):
+        if not new_id: return old_id
+        self.log_mind_event("EVENT", f"User '{old_id}' is now known as '{new_id}'.")
+        with self.thinking_lock:
+            users = self.cognitive_model.setdefault('users', {})
+            if old_id in users and new_id not in users:
+                users[new_id] = users[old_id]; del users[old_id]
+                self.message_queue.put(f"Oh, {new_id}. Got it. Nice to properly meet you.")
+                return new_id
+        return old_id
+
+    def _synthesize_memory(self, user_id):
+        user_profile = self.get_or_create_user(user_id)
+        if len(user_profile['conversation_log']) < 4: return
+        self.log_mind_event("EVENT", f"Synthesizing memories for user '{user_id}'.")
+        context = "\n".join(user_profile['conversation_log'])
+        synthesis_prompt = f'Here is a conversation log. Summarize it into 1-2 key emotional impressions. --- {context} --- Output JSON with a "summary" key (list of strings).'
+        response = self._safe_generate_content(synthesis_prompt)
+        if response:
+            try:
+                summary = json.loads(response.strip().removeprefix("```json").removesuffix("```").strip())['summary']
+                user_profile['synthesized_memories'].extend(summary)
+                user_profile['conversation_log'] = []
+                self.log_mind_event("MEMORY", f"New synthesized memories for '{user_id}': {summary}")
+            except Exception as e: self.log_mind_event("ERROR", f"Memory synthesis failed: {e}")
+
+    def live(self):
+        time.sleep(2)
+        self.process_thought("EVENT: Waking Up", "user", "I am waking up for the first time in this session.")
+        while True:
+            time.sleep(20) # Slower heartbeat for less API usage and more thoughtful pauses.... sadly its because of limitations with free AI
+            if self.is_rate_limited:
+                if time.time() > self.rate_limit_until:
+                    self.log_mind_event("EVENT", "Attempting recovery from forced sleep.")
+                    with self.thinking_lock: self.is_rate_limited = False; self.needs['energy'] = 0.3
+                    self.message_queue.put("*...she stirs, looking dazed...* What... what happened?")
+                continue
+            
+            if not self.is_asleep:
+                with self.thinking_lock:
+                    self.needs['attention_need'] = min(1, self.needs['attention_need'] + 0.01)
+                    self.needs['energy'] = max(0, self.needs['energy'] - 0.01)
+                
+                users_with_unsynthesized_logs = [uid for uid, prof in self.cognitive_model.get('users', {}).items() if len(prof.get('conversation_log', [])) >= 4 and time.time() - prof.get('last_interaction_time', 0) > 60]
+                if users_with_unsynthesized_logs:
+                    user_to_reflect_on = users_with_unsynthesized_logs[0]
+                    self.process_thought("AUTONOMOUS: Memory Synthesis", user_to_reflect_on, "It's been quiet for a bit. I should think about what we talked about.")
+                elif self.needs['energy'] < 0.1:
+                    self.log_mind_event("EVENT", "Energy critical. Falling asleep.")
+                    self.message_queue.put("*Her eyes get heavy... her breathing slows...*")
+                    with self.thinking_lock: self.needs['energy'] = 0.0
+            
+            elif self.needs['energy'] == 0 and not self.is_rate_limited:
+                self.log_mind_event("EVENT", "Dreaming to recover energy.")
+                with self.thinking_lock: self.needs['energy'] = 1.0
+            
+    def shutdown_sequence(self, user_id):
+        self.log_mind_event("SYSTEM", "Shutdown sequence initiated.")
+        if not self.is_asleep: self.process_thought("EVENT: User is leaving", user_id, "This user is leaving now.")
+        time.sleep(2)
         try:
-            search = GoogleSearch({"engine": "google", "q": research_query, "api_key": SERPAPI_API_KEY})
-            context = " ".join([r.get('snippet', '') for r in search.get_dict().get('organic_results', [])[:3]])
-            if not context: return "(She seems to have lost her train of thought.)"
+            message = self.message_queue.get(block=False)
+            print(f"\n{self.identity.get('name')}: {message}")
+        except queue.Empty: pass
+        self.save_state()
+        print(f"\n({self.identity.get('name')} has gone offline.)")
 
-            synthesis_prompt = f"""
-            {personality_prompt}
-            You heard the user say "{user_input}" and you privately researched "{research_query}".
-            Your research returned: {context}
-            Now, with this new insight, form your true, final response.
-            Output JSON with one key: "final_response".
-            """
-            synthesis_response = self._safe_generate_content(synthesis_prompt)
-            final_result = json.loads(synthesis_response.strip().replace("```json", "").replace("```", "").strip())
-            self.data.setdefault('learned_knowledge', {})[research_query.lower()] = context.split('.')[0]
-            return final_result.get("final_response")
-        except Exception:
-            return "(Her thoughts trail off...)"
+# --- ASYNCHRONOUS MAIN APPLICATION LOOP ---
+async def handle_ai_messages(mind, prompt_state):
+    while True:
+        try:
+            message = mind.message_queue.get(block=False)
+            status_text = "(is sleeping)" if mind.is_asleep else ""
+            current_prompt = f"{prompt_state['user_id']} {status_text}: "
+            print(f"\r{' ' * (len(current_prompt) + 80)}\r{mind.identity.get('name')}: {message}")
+            print(current_prompt, end="", flush=True)
+        except queue.Empty: await asyncio.sleep(0.1)
 
-    def _update_emotions_pre_response(self, user_input):
-        """Her emotions react to the user's tone before she even thinks."""
-        if len(user_input) < 15:
-            self.emotions['rapport'] = max(0, self.emotions['rapport'] - 0.05)
-            self.emotions['annoyance'] = min(1, self.emotions['annoyance'] + 0.1)
-        if '!' in user_input or '✨' in user_input:
-            self.emotions['rapport'] = min(1, self.emotions['rapport'] + 0.1)
-            self.emotions['annoyance'] = max(0, self.emotions['annoyance'] - 0.1)
-
-    def _update_emotions_post_response(self, reaction):
-        """Her emotions change based on her own internal reaction."""
-        for emotion, change in reaction.items():
-            if emotion in self.emotions:
-                self.emotions[emotion] = max(0, min(1, self.emotions[emotion] + change))
+async def handle_user_input(mind, prompt_state):
+    while True:
+        status_text = "(is sleeping)" if mind.is_asleep else ""
+        prompt = f"{prompt_state['user_id']} {status_text}: "
+        try:
+            user_input = await aioconsole.ainput(prompt)
+        except EOFError: return
         
-        if self.emotions['rapport'] > 0.7: self.emotions['mood'] = 'friendly and engaged'
-        elif self.emotions['annoyance'] > 0.6: self.emotions['mood'] = 'a bit annoyed and distant'
-        else: self.emotions['mood'] = 'neutral and observant'
-
-    def _get_personality_prompt(self, history):
-        """Constructs her reality, now including her live emotional state."""
-        with open(self.personality_path, 'r', encoding='utf-8') as f: base_prompt = f.read()
+        if user_input.lower() in ['/quit', '/exit']:
+            for task in asyncio.all_tasks():
+                if task is not asyncio.current_task(): task.cancel()
+            return
+            
+        if mind.is_asleep: continue
         
-        base_prompt += "\n== My Identity (Unshakable truths about me) ==\n"
-        for key, value in self.data.get('identity', {}).items(): base_prompt += f"- My {key} is {value}.\n"
-
-        base_prompt += "\n== My Current Emotional State ==\n"
-        base_prompt += f"- Right now, I am feeling {self.emotions['mood']}.\n"
-        base_prompt += f"- My current rapport with this person is {self.emotions['rapport']:.2f} (1.0 is a deep bond, 0.0 is total disconnect).\n"
-        base_prompt += f"- My current annoyance level is {self.emotions['annoyance']:.2f} (1.0 is very irritated, 0.0 is calm).\n"
-        base_prompt += "**This emotional state MUST guide your tone and response. Do not explicitly state your emotions unless you feel it is natural to do so.**\n"
+        user_profile = mind.get_or_create_user(prompt_state['user_id'])
+        user_profile['conversation_log'].append(f"{prompt_state['user_id']}: {user_input}")
+        user_profile['last_interaction_time'] = time.time()
         
-        if self.data.get('learned_facts'):
-            base_prompt += "\n== What I Know About My Friend ==\n"
-            for key, data in self.data.get('learned_facts', {}).items():
-                value = data.get('value') if isinstance(data, dict) else data
-                base_prompt += f"- I know their '{key}' is '{value}'.\n"
+        new_user_id = await asyncio.to_thread(mind.process_thought, "User interaction", prompt_state['user_id'], user_input)
+        if new_user_id and new_user_id != prompt_state['user_id']:
+            prompt_state['user_id'] = new_user_id
 
-        base_prompt += f"\n== Current Conversation History ==\n{history}"
-        return base_prompt
-        
-    def generate_goodbye_message(self):
-        # The goodbye message is a final, emotional reflection.
-        prompt = f"{self._get_personality_prompt('')}\n== Task ==\nYour friend has decided to leave. Based on your final emotional state and the conversation, generate a goodbye."
-        return self._safe_generate_content(prompt)
-
-# --- Main Application Loop (No changes needed) ---
-print("Booting Jessica's consciousness... She is waking up. 🧠")
-mind = JessicaMind()
-print(f"Jessica is ready. (´｡• ᵕ •｡`)")
-conversation_history = ""
-
-while True:
+async def main():
+    mind = LivingMind()
+    prompt_state = {"user_id": "user"}
+    os.system('cls' if os.name == 'nt' else 'clear')
+    await aioconsole.aprint("...connection established...")
+    heartbeat = threading.Thread(target=mind.live, daemon=True)
+    heartbeat.start()
     try:
-        user_input = input("You: ")
-        if user_input.lower() in ['quit', 'exit']: break
-        bot_text = mind.think_and_respond(conversation_history, user_input)
-        if bot_text:
-            print(f"Jessica: {bot_text}")
-            conversation_history += f"Human: {user_input}\nJessica: {bot_text}\n"
-    except KeyboardInterrupt: break
-    except Exception as e: print(f"\n[SYSTEM_ERROR: An unhandled error occurred: {e}]")
+        input_task = asyncio.create_task(handle_user_input(mind, prompt_state))
+        message_task = asyncio.create_task(handle_ai_messages(mind, prompt_state))
+        await asyncio.gather(input_task, message_task)
+    except (asyncio.CancelledError, KeyboardInterrupt): pass
+    finally:
+        mind.shutdown_sequence(prompt_state['user_id'])
 
-goodbye_message = mind.generate_goodbye_message()
-print(f"\nJessica: {goodbye_message if goodbye_message else '...bye.'}")
-mind.save_memory()
-print(f"*Jessica quietly updates her journal one last time...*")
+if __name__ == "__main__":
+    try: asyncio.run(main())
+    except KeyboardInterrupt: pass
