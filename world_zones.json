@@ -1,0 +1,141 @@
+{
+  "_comment": "World Atlas for Project Jessica. This file defines continental landmasses, biomes, and major city archetypes on a planetary scale. All coordinates are [X, Y, Z]. Z is typically 0 for ground level, -1 for subways, etc.",
+
+  "========================= THE GREAT OCEAN =========================": {},
+  "The_Great_Ocean": {
+    "bounds": {"x": [-10000, 10000], "y": [-10000, 10000], "z": [0, 0]},
+    "exclude": ["Aethel_Continent", "Veridia_Continent", "Rhovan_Continent", "Kailani_Archipelago"],
+    "theme": "vast open ocean, rolling waves, empty horizon, shipping lanes, deep water, solitude, marine life",
+    "_description": "The massive ocean separating the world's major landmasses. The default 'empty' space of the world."
+  },
+
+  "========================= CONTINENT 1: AETHEL (Home) =========================": {},
+  "Aethel_Continent": {
+    "bounds": {"x": [-200, 200], "y": [-200, 200], "z": [0, 0]},
+    "_description": "Jessica's home continent. A temperate region with a large, modern metropolis surrounded by suburbs and countryside."
+  },
+  "Aethel_City_Metro_Area": {
+    "bounds": {"x": [-70, 70], "y": [-50, 100], "z": [0, 5]},
+    "exclude": ["The_Great_Ocean"],
+    "_description": "The entire metropolitan area of Jessica's home city."
+  },
+  "Apartment_Complex": {
+    "bounds": {"x": [-2, 2], "y": [-2, 2], "z": [-1, 5]},
+    "theme": "residential building, apartment, hallway, lobby, rooftop, laundry room, basement, boiler room, quiet, indoor, private",
+    "_description": "Jessica's immediate home."
+  },
+  "Urban_Residential_Ring": {
+    "bounds": {"x": [-10, 10], "y": [-10, 10], "z": [0, 0]},
+    "exclude": ["Apartment_Complex"],
+    "theme": "city street, brownstones, local businesses, corner store, laundromat, small parkette, tree-lined, outdoor, neighborhood"
+  },
+  "Downtown_Commercial_Core": {
+    "bounds": {"x": [11, 50], "y": [-25, 25], "z": [0, 0]},
+    "theme": "financial district, skyscrapers, corporate plazas, busy streets, traffic, pedestrians, modern, glass and steel, outdoor, urban, impersonal"
+  },
+  "Theater_And_Entertainment_District": {
+    "bounds": {"x": [15, 30], "y": [26, 40], "z": [0, 0]},
+    "theme": "bright lights, billboards, theater marquees, cinemas, bars, restaurants, crowds, nightlife, exciting, loud, outdoor, urban"
+  },
+  "Civic_And_Cultural_Center": {
+    "bounds": {"x": [-11, -30], "y": [11, 30], "z": [0, 0]},
+    "theme": "city hall, courthouse, grand library, museums, art galleries, formal plazas, historic architecture, government, institutional, outdoor, urban"
+  },
+  "University_Campus": {
+    "bounds": {"x": [-11, -30], "y": [31, 50], "z": [0, 0]},
+    "theme": "university buildings, lecture halls, campus green, quads, libraries, students, academic, historic brick, youthful, outdoor, institutional"
+  },
+  "Industrial_Warehouse_District": {
+    "bounds": {"x": [-10, 50], "y": [-11, -35], "z": [0, 0]},
+    "theme": "old brick warehouses, loading docks, industrial lofts, graffiti, chain-link fences, gritty, semi-abandoned, outdoor, urban"
+  },
+  "Port_And_Shipping_Yards": {
+    "bounds": {"x": [-10, 50], "y": [-36, -50], "z": [0, 0]},
+    "theme": "shipping containers, cranes, docks, freighters, shipyard, seagulls, salt and diesel, noisy, functional, outdoor, industrial"
+  },
+  "Inner_Suburbs": {
+    "bounds": {"x": [-11, -40], "y": [-10, 10], "z": [0, 0]},
+    "theme": "quiet residential street, single-family homes, manicured lawns, picket fences, playgrounds, peaceful, outdoor, suburban"
+  },
+  "Grand_City_Park": {
+    "bounds": {"x": [-41, -70], "y": [-25, 25], "z": [0, 0]},
+    "theme": "large public park, walking trails, botanical garden, lake, bridges, open fields, forest groves, relaxing, outdoor"
+  },
+  "Aethel_International_Airport_AIA": {
+    "bounds": {"x": [71, 100], "y": [0, 25], "z": [0, 1]},
+    "theme": "airport terminal, runways, control tower, security gates, duty-free shops, crowds of travelers, announcements, liminal space, indoor, outdoor",
+    "_description": "The major international airport for the region. The gateway to the world."
+  },
+  "Aethel_Countryside": {
+    "bounds": {"x": [-200, 200], "y": [-200, 200], "z": [0, 0]},
+    "exclude": ["Aethel_City_Metro_Area"],
+    "theme": "rolling hills, farmland, country roads, forests, sparse houses, barns, quiet, natural, isolated, outdoor, rural",
+    "_description": "The rural areas of the home continent outside the city."
+  },
+  "Aethel_National_Forest": {
+    "bounds": {"x": [-200, -71], "y": [-100, 100], "z": [0, 0]},
+    "theme": "dense forest, ancient trees, logging roads, ranger station, waterfalls, hiking trails, wilderness, secluded, natural, outdoor"
+  },
+  "Coastal_Highway_Route_1": {
+    "bounds": {"x": [-200, 200], "y": [-200, -190], "z": [0, 0]},
+    "theme": "coastal highway, ocean views, seaside cliffs, small towns, motels, gas stations, scenic route, outdoor, travel"
+  },
+  "Subway_System": {
+    "bounds": {"x": [-70, 70], "y": [-50, 50], "z": [-1, -1]},
+    "theme": "subway station, tunnels, tracks, tile walls, echoing sounds, flickering lights, underground, public transit, confined, indoor"
+  },
+  
+  "========================= CONTINENT 2: VERIDIA (High Tech) =========================": {},
+  "Veridia_Continent": {
+    "bounds": {"x": [5000, 5500], "y": [5000, 5500], "z": [0, 10]},
+    "_description": "A technologically advanced continent, dominated by the mega-city of Neo-Kyoto."
+  },
+  "Veridia_Stellarport_VSP": {
+    "bounds": {"x": [5000, 5050], "y": [5200, 5250], "z": [5, 10]},
+    "theme": "gleaming spaceport, maglev departures, holographic displays, corporate sponsorship, sterile, efficient, advanced technology, indoor, travel"
+  },
+  "NeoKyoto_Nexus_Core": {
+    "bounds": {"x": [5051, 5300], "y": [5051, 5300], "z": [0, 10]},
+    "theme": "neon-drenched skyscrapers, multi-level highways, flying vehicles, mega-corporations, crowds, cybernetics, augmented reality, futuristic, outdoor, urban"
+  },
+  "NeoKyoto_The_Undercity": {
+    "bounds": {"x": [5051, 5300], "y": [5051, 5300], "z": [-1, -1]},
+    "theme": "cramped alleyways, steam vents, noodle stalls, black markets, grit, rain-slicked, perpetual twilight, dangerous, indoor, urban"
+  },
+
+  "========================= CONTINENT 3: RHOVAN (Old World) =========================": {},
+  "Rhovan_Continent": {
+    "bounds": {"x": [-8000, -7500], "y": [3000, 3500], "z": [0, 1]},
+    "_description": "An old continent rich with history, tradition, and dramatic natural landscapes."
+  },
+  "Aethelgard_Airfield": {
+    "bounds": {"x": [-7950, -7900], "y": [3225, 3275], "z": [0, 0]},
+    "theme": "small airfield, propeller planes, windswept runway, old hangar, rustic, travel, outdoor"
+  },
+  "Aethelgard_Old_Town": {
+    "bounds": {"x": [-7800, -7700], "y": [3200, 3300], "z": [0, 0]},
+    "theme": "cobblestone streets, ancient cathedral, clock tower, timber-framed houses, history, folklore, quaint, charming, outdoor, urban"
+  },
+  "The_Whispering_Mountains": {
+    "bounds": {"x": [-8000, -7500], "y": [3301, 3500], "z": [0, 1]},
+    "theme": "ancient ruins, misty peaks, mountain monasteries, winding trails, dramatic vistas, solitude, spiritual, outdoor, wilderness"
+  },
+
+  "========================= REGION 4: KAILANI ARCHIPELAGO (Tropical) =========================": {},
+  "Kailani_Archipelago": {
+    "bounds": {"x": [1000, 1500], "y": [-8000, -7500], "z": [0, 0]},
+    "_description": "A chain of volcanic tropical islands in the southern ocean."
+  },
+  "Mauna_Loa_Regional_Airport_MLR": {
+    "bounds": {"x": [1200, 1250], "y": [-7775, -7725], "z": [0, 0]},
+    "theme": "open-air terminal, small planes, smell of tropical flowers and jet fuel, relaxed, island time, travel, indoor, outdoor"
+  },
+  "Volcanic_Main_Island": {
+    "bounds": {"x": [1150, 1350], "y": [-7800, -7700], "z": [0, 0]},
+    "theme": "black sand beaches, lava fields, dense tropical jungle, luxury resorts, tiki bars, touristy, outdoor, natural"
+  },
+  "The_Sunken_City_of_Anu": {
+    "bounds": {"x": [1400, 1450], "y": [-7600, -7550], "z": [-1, -1]},
+    "theme": "underwater ruins, mysterious carvings, coral-encrusted, deep ocean pressure, marine life, ancient, silent, requires special equipment"
+  }
+}

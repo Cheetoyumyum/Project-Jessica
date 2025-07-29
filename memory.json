@@ -14,5 +14,15 @@
         "rapport": 0.39999999999999986,
         "annoyance": 1,
         "mood": "a bit annoyed and distant"
-    }
+    },
+    "needs": {
+        "attention_need": 0.015,
+        "mental_load": 0.18,
+        "energy": 0.98
+    },
+    "cognitive_model": {},
+    "conversation_log": [
+        "You: hello jess",
+        "You: Jess? hey, soSsorry to bother jess, nice to meet you"
+    ]
 }
