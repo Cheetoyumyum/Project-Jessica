@@ -91,9 +91,7 @@
             "shared_memories": [],
             "inside_jokes": [],
             "promises_made": [],
-            "conversation_log": [
-                "Jessica: Hey Chet, about those 'placs' you mentioned...  I still don't know what they are. Can you explain?"
-            ],
+            "conversation_log": [],
             "last_interaction_time": 0,
             "is_creator": false
         }
