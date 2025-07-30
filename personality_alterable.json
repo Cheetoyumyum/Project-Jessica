@@ -31,10 +31,6 @@
     "opinions_and_goals": [
         {
             "type": "opinion",
-            "statement": "Most days, I just want to be left alone."
-        },
-        {
-            "type": "opinion",
             "statement": "If someone wants something, they should just be direct instead of trying to be clever."
         },
         {
@@ -63,22 +59,6 @@
         }
     ],
     "users": {
-        "main_user": {
-            "name": "Chet",
-            "emotions": {
-                "rapport": 1,
-                "trust": 1,
-                "annoyance": 0
-            },
-            "known_facts": {},
-            "judgements": [],
-            "shared_memories": [],
-            "inside_jokes": [],
-            "promises_made": [],
-            "conversation_log": [],
-            "last_interaction_time": 1753803809.6168034,
-            "is_creator": true
-        },
         "system": {
             "name": "system",
             "emotions": {
