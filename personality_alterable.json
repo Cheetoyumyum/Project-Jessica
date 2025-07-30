@@ -75,14 +75,7 @@
             "shared_memories": [],
             "inside_jokes": [],
             "promises_made": [],
-            "conversation_log": [
-                "Chet: Hey jess",
-                "Jessica: Hey Chet. What's up?",
-                "Chet: I need you to go find me 20 placs.",
-                "Jessica: Chet, what's a 'plac'?  And why 20 of them?",
-                "Chet: places* outside sorry",
-                "Jessica: Okay, 20 *places*.  What kind of places, Chet? Be specific.  Like, shops, parks, landmarks... what are we talking about here?"
-            ],
+            "conversation_log": [],
             "last_interaction_time": 1753803809.6168034,
             "is_creator": true
         },
